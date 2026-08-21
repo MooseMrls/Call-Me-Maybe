@@ -254,25 +254,25 @@ export default function App() {
           overflow: hidden;
         }
 
-        .dynamic-island {
-          position: absolute;
-          top: 14px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 124px;
-          height: 34px;
-          background: #000000;
-          border-radius: 20px;
-          z-index: 100;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0 12px;
-          box-sizing: border-box;
-          border: 0.5px solid rgba(255,255,255,0.05);
-        }
-        .island-camera { width: 11px; height: 11px; background: #121216; border-radius: 50%; }
-        .island-sensor { width: 11px; height: 11px; background: #07070F; border-radius: 50%; }
+        // .dynamic-island {
+        //   position: absolute;
+        //   top: 14px;
+        //   left: 50%;
+        //   transform: translateX(-50%);
+        //   width: 124px;
+        //   height: 34px;
+        //   background: #000000;
+        //   border-radius: 20px;
+        //   z-index: 100;
+        //   display: flex;
+        //   align-items: center;
+        //   justify-content: space-between;
+        //   padding: 0 12px;
+        //   box-sizing: border-box;
+        //   border: 0.5px solid rgba(255,255,255,0.05);
+        // }
+        // .island-camera { width: 11px; height: 11px; background: #121216; border-radius: 50%; }
+        // .island-sensor { width: 11px; height: 11px; background: #07070F; border-radius: 50%; }
 
         .ios-status-bar {
           display: flex;
