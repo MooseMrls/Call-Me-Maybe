@@ -30,6 +30,8 @@ function formatWhen(ts) {
   return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 export default function App() {
   const [activeScreen, setActiveScreen] = useState('call'); // 'call' | 'voicemails'
   const [callState, setCallState] = useState('incoming'); // 'incoming' | 'connected' | 'review'
@@ -55,7 +57,7 @@ export default function App() {
 
   const loadMessages = useCallback(async () => {
     try {
-      const res = await fetch('/api/messages');
+      const res = await fetch(`${API_BASE_URL}/api/messages`);
       if (!res.ok) throw new Error('Request failed');
       const data = await res.json();
       setMessages(data);
@@ -114,7 +116,7 @@ export default function App() {
       form.append('label', 'Voice Message');
       form.append('duration', String(duration));
 
-      const res = await fetch('/api/messages', { method: 'POST', body: form });
+      const res = await fetch(`${API_BASE_URL}/api/messages`, { method: 'POST', body: form });
       if (!res.ok) throw new Error('Upload failed');
       const saved = await res.json();
       setMessages((prev) => [saved, ...prev]);
@@ -171,7 +173,7 @@ export default function App() {
 
   const deleteMessage = useCallback(async (id) => {
     try {
-      await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/api/messages/${id}`, { method: 'DELETE' });
     } catch (e) { /* ignore */ }
     setMessages((prev) => prev.filter((m) => m._id !== id));
     if (playingId === id) {
@@ -188,7 +190,7 @@ export default function App() {
       setPlayingId(null);
       return;
     }
-    el.src = `/uploads/${msg.filename}`;
+    el.src = `${API_BASE_URL}/uploads/${msg.filename}`;
     el.play().catch(() => {});
     setPlayingId(msg._id);
   }, [playingId]);

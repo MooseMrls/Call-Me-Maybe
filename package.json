@@ -1,0 +1,9 @@
+{
+  "name": "call-me-maybe",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server"
+  }
+}
