@@ -62,7 +62,7 @@ export default function App() {
       const data = await res.json();
       setMessages(data);
     } catch (e) {
-      setError('Could not reach the server. Is it running on port 5001?');
+      setError('Could not reach the server. Make sure the backend server is running and VITE_API_URL is configured.');
     } finally {
       setLoaded(true);
     }
@@ -214,24 +214,29 @@ export default function App() {
       <style>{`
         .apple-phone-wrap {
           background: #000;
-          min-height: 100vh;
-          width: 100%;
+          height: 100vh;
+          height: -webkit-fill-available;
+          width: 100vw;
           display: flex;
           align-items: center;
           justify-content: center;
           font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
           color: #FFF;
           user-select: none;
-          padding: 20px 0;
+          padding: 0;
+          margin: 0;
           box-sizing: border-box;
+          overflow: hidden;
         }
 
         .iphone-casing {
-          width: 390px;
-          height: 844px;
+          width: 100%;
+          height: 100%;
+          max-width: 100%;
+          max-height: 100%;
           background: #000000;
-          border-radius: 54px;
-          box-shadow: 0 35px 90px rgba(0, 0, 0, 0.95), 0 0 0 12px #1C1C1E, 0 0 0 13px rgba(255, 255, 255, 0.12);
+          border-radius: 0;
+          box-shadow: none;
           position: relative;
           display: flex;
           flex-direction: column;
