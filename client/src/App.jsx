@@ -131,6 +131,16 @@ export default function App() {
 
   const answerCall = useCallback(async () => {
     setError('');
+    // Trigger native browser fullscreen on user interaction
+    try {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen().catch(() => {});
+      }
+    } catch (e) { /* ignore fullscreen errors */ }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
