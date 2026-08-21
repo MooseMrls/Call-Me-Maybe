@@ -293,7 +293,7 @@ export default function App() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 20px 0;
+          padding: calc(env(safe-area-inset-top, 12px) + 12px) 20px 0;
         }
         .nav-btn {
           background: rgba(255, 255, 255, 0.15);
