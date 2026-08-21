@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Phone, PhoneOff, Play, Pause, Trash2, ArrowLeft, Mic } from 'lucide-react';
+import elliPic from './img/elli.jpg';
 
 const MIME_CANDIDATES = [
   'audio/mp4',
@@ -131,16 +132,6 @@ export default function App() {
 
   const answerCall = useCallback(async () => {
     setError('');
-    // Trigger native browser fullscreen on user interaction
-    try {
-      const docEl = document.documentElement;
-      if (docEl.requestFullscreen) {
-        docEl.requestFullscreen().catch(() => {});
-      } else if (docEl.webkitRequestFullscreen) {
-        docEl.webkitRequestFullscreen().catch(() => {});
-      }
-    } catch (e) { /* ignore fullscreen errors */ }
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -171,6 +162,16 @@ export default function App() {
   }, [startLevelLoop, autoSaveRecording]);
 
   const endCall = useCallback(() => {
+    // Trigger native browser fullscreen on user interaction (Decline)
+    try {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen().catch(() => {});
+      }
+    } catch (e) { /* ignore fullscreen errors */ }
+
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
     stopLevelLoop();
@@ -347,12 +348,16 @@ export default function App() {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 42px;
-          font-weight: 600;
-          color: #FFF;
           box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
           margin: 0 auto 20px auto;
           border: 1px solid rgba(255, 255, 255, 0.15);
+          overflow: hidden;
+        }
+        .caller-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
         }
 
         .pulse-ring {
@@ -618,7 +623,7 @@ export default function App() {
               
               <div className="apple-caller-header">
                 <div className={`apple-caller-avatar ${callState === 'connected' ? 'pulse-ring' : ''}`}>
-                  {callerName.charAt(0)}
+                  <img src={elliPic} alt="Elli" className="caller-img" />
                 </div>
 
                 <h1 className="apple-caller-title">{callerName}</h1>
