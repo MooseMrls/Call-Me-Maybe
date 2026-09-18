@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Phone, PhoneOff, Play, Pause, Trash2, ArrowLeft, Mic } from 'lucide-react';
-import elliPic from './img/elli.jpg';
+import { Phone, PhoneOff, Play, Pause, Trash2, ArrowLeft, Mic, User } from 'lucide-react';
 
 const MIME_CANDIDATES = [
   'audio/mp4',
@@ -623,10 +622,8 @@ export default function App() {
               
               <div className="apple-caller-header">
                 <div className={`apple-caller-avatar ${callState === 'connected' ? 'pulse-ring' : ''}`}>
-                  <img src={elliPic} alt="Elli" className="caller-img" />
+                  <User size={54} color="#ffffff" />
                 </div>
-
-                <h1 className="apple-caller-title">{callerName}</h1>
 
                 {callState === 'incoming' && (
                   <p className="apple-call-subtitle">Incoming Call…</p>
