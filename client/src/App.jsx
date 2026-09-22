@@ -1,11 +1,21 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Phone, PhoneOff, Play, Pause, Trash2, ArrowLeft, Mic, User } from 'lucide-react';
+import { Phone, PhoneOff, Play, Pause, Trash2, ArrowLeft, Mic, User, Lock, LockKeyhole, Clock } from 'lucide-react';
 
 const MIME_CANDIDATES = [
   'audio/mp4',
   'audio/webm;codecs=opus',
   'audio/webm',
   'audio/ogg;codecs=opus',
+];
+
+const TIME_LOCK_PRESETS = [
+  { label: 'No Lock (Instant)', seconds: 0 },
+  { label: '24 Hours', seconds: 86400 },
+  { label: '1 Week', seconds: 7 * 86400 },
+  { label: '1 Month', seconds: 30 * 86400 },
+  { label: '1 Year', seconds: 365 * 86400 },
+  { label: '5 Years', seconds: 5 * 365 * 86400 },
+  { label: '10 Years', seconds: 10 * 365 * 86400 },
 ];
 
 function pickMimeType() {
@@ -30,6 +40,26 @@ function formatWhen(ts) {
   return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
 }
 
+function formatRemaining(remainingMs) {
+  if (remainingMs <= 0) return 'Unlocked';
+  const totalSec = Math.ceil(remainingMs / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  if (m < 60) return `${m}m ${s.toString().padStart(2, '0')}s`;
+
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  if (h < 24) return `${h}h ${remM}m`;
+
+  const days = Math.floor(h / 24);
+  if (days < 365) return `${days}d ${h % 24}h`;
+
+  const years = (days / 365).toFixed(1);
+  return `${years} yrs`;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export default function App() {
@@ -46,6 +76,19 @@ export default function App() {
   const [levels, setLevels] = useState(Array(28).fill(3));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [selectedLockDelay, setSelectedLockDelay] = useState(30); // Default 30s lock for instant demo
+  const [now, setNow] = useState(Date.now());
+
+  const selectedLockDelayRef = useRef(selectedLockDelay);
+  useEffect(() => {
+    selectedLockDelayRef.current = selectedLockDelay;
+  }, [selectedLockDelay]);
+
+  // Live ticker for countdown updating every second
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -115,6 +158,7 @@ export default function App() {
       form.append('audio', blob, `recording.${ext}`);
       form.append('label', 'Voice Message');
       form.append('duration', String(duration));
+      form.append('unlockDelaySeconds', String(selectedLockDelayRef.current));
 
       const res = await fetch(`${API_BASE_URL}/api/messages`, { method: 'POST', body: form });
       if (!res.ok) throw new Error('Upload failed');
@@ -195,13 +239,25 @@ export default function App() {
   const togglePlay = useCallback((msg) => {
     const el = audioElRef.current;
     if (!el) return;
+
+    // Check if message is locked
+    const remMs = msg.unlockAt ? new Date(msg.unlockAt).getTime() - Date.now() : 0;
+    if (remMs > 0) {
+      setError(`🔒 Time Capsule Locked! Unlocks in ${formatRemaining(remMs)}.`);
+      setTimeout(() => setError(''), 4000);
+      return;
+    }
+
     if (playingId === msg._id) {
       el.pause();
       setPlayingId(null);
       return;
     }
-    el.src = `${API_BASE_URL}/uploads/${msg.filename}`;
-    el.play().catch(() => {});
+    // Stream endpoint enforces backend lock validation as well
+    el.src = `${API_BASE_URL}/api/messages/${msg._id}/stream`;
+    el.play().catch(() => {
+      setError('Could not play audio message.');
+    });
     setPlayingId(msg._id);
   }, [playingId]);
 
@@ -560,10 +616,15 @@ export default function App() {
           border-radius: 18px;
           margin-bottom: 12px;
           backdrop-filter: blur(20px);
+          transition: all 0.3s ease;
+        }
+        .voicemail-row.locked-row {
+          background: rgba(255, 0, 0, 0.08);
+          border: 1px solid rgba(255, 0, 0, 0.2);
         }
         .vm-play-circle {
-          width: 42px;
-          height: 42px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
           background: #34C759;
           border: none;
@@ -572,6 +633,12 @@ export default function App() {
           align-items: center;
           justify-content: center;
           cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 14px rgba(52, 199, 89, 0.3);
+        }
+        .vm-play-circle.locked {
+          background: linear-gradient(135deg, #ff0000ff 0%, #FF3B30 100%);
+          box-shadow: 0 4px 14px rgba(255, 0, 0, 0.4);
         }
         .vm-details {
           flex: 1;
@@ -580,6 +647,52 @@ export default function App() {
         }
         .vm-name { font-size: 16px; font-weight: 600; }
         .vm-sub { font-size: 13px; color: rgba(255, 255, 255, 0.5); margin-top: 2px; }
+        .vm-lock-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: rgba(255, 149, 0, 0.2);
+          color: #ffffffff;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 10px;
+          margin-top: 5px;
+          border: 1px solid rgba(255, 214, 10, 0.3);
+        }
+
+        .time-lock-bar {
+          margin: 12px 0 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          padding: 8px 16px;
+          border-radius: 20px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .time-lock-label {
+          font-size: 13px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: rgba(255, 255, 255, 0.9);
+        }
+        .time-lock-select {
+          background: rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #ffffffff;
+          font-size: 13px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 12px;
+          outline: none;
+          cursor: pointer;
+        }
 
         .apple-error-toast {
           background: rgba(255, 59, 48, 0.9);
@@ -631,7 +744,6 @@ export default function App() {
 
                 {callState === 'connected' && (
                   <>
-                    {/* <p className="apple-call-subtitle">Recording Live Call</p> */}
                     <div className="apple-call-timer">{formatTime(elapsed)}</div>
                     
                     <div className="visualizer-wave">
@@ -641,6 +753,24 @@ export default function App() {
                     </div>
                   </>
                 )}
+
+                <div className="time-lock-bar">
+                  <div className="time-lock-label">
+                    <Lock size={15} color={selectedLockDelay > 0 ? '#ff0000ff' : 'rgba(255,255,255,0.7)'} />
+                    <span>Time Capsule:</span>
+                  </div>
+                  <select
+                    className="time-lock-select"
+                    value={selectedLockDelay}
+                    onChange={(e) => setSelectedLockDelay(Number(e.target.value))}
+                  >
+                    {TIME_LOCK_PRESETS.map((p) => (
+                      <option key={p.seconds} value={p.seconds}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {callState === 'connected' && (
@@ -700,8 +830,6 @@ export default function App() {
                 </div>
               )}
 
-
-
               {error && <div className="apple-error-toast">{error}</div>}
             </div>
           )}
@@ -714,23 +842,44 @@ export default function App() {
                   No saved voicemails
                 </p>
               ) : (
-                messages.map((m) => (
-                  <div className="voicemail-row" key={m._id}>
-                    <button className="vm-play-circle" onClick={() => togglePlay(m)}>
-                      {playingId === m._id ? <Pause size={18} /> : <Play size={18} />}
-                    </button>
-                    <div className="vm-details">
-                      <div className="vm-name">{m.label || 'Unknown Caller'}</div>
-                      <div className="vm-sub">{formatWhen(m.createdAt)} · {formatTime(m.duration)}</div>
+                messages.map((m) => {
+                  const remainingMs = m.unlockAt ? new Date(m.unlockAt).getTime() - now : 0;
+                  const isLocked = remainingMs > 0;
+
+                  return (
+                    <div className={`voicemail-row ${isLocked ? 'locked-row' : ''}`} key={m._id}>
+                      <button
+                        className={`vm-play-circle ${isLocked ? 'locked' : ''}`}
+                        onClick={() => togglePlay(m)}
+                        title={isLocked ? `Locked for ${formatRemaining(remainingMs)}` : 'Play'}
+                      >
+                        {isLocked ? (
+                          <Lock size={18} />
+                        ) : playingId === m._id ? (
+                          <Pause size={18} />
+                        ) : (
+                          <Play size={18} />
+                        )}
+                      </button>
+                      <div className="vm-details">
+                        <div className="vm-name">{m.label || 'Unknown Caller'}</div>
+                        <div className="vm-sub">{formatWhen(m.createdAt)} · {formatTime(m.duration)}</div>
+                        {isLocked && (
+                          <div className="vm-lock-tag">
+                            <Clock size={12} />
+                            <span>Unlocks in {formatRemaining(remainingMs)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                        onClick={() => deleteMessage(m._id)}
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
-                    <button
-                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
-                      onClick={() => deleteMessage(m._id)}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

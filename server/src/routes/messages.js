@@ -31,16 +31,43 @@ router.get('/', async (req, res) => {
   res.json(messages);
 });
 
+// Serve audio stream with time-lock validation
+router.get('/:id/stream', async (req, res) => {
+  try {
+    const message = await VoiceMessage.findById(req.params.id);
+    if (!message) return res.status(404).json({ error: 'Message not found.' });
+
+    if (message.unlockAt && new Date(message.unlockAt) > new Date()) {
+      return res.status(403).json({ error: 'This voice message is currently time-locked.' });
+    }
+
+    const filePath = path.join(uploadsDir, message.filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Audio file not found.' });
+    }
+
+    res.sendFile(filePath);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not stream audio.' });
+  }
+});
+
 // Upload a new recording
 router.post('/', upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No audio file received.' });
     const count = await VoiceMessage.countDocuments();
+    
+    const lockDelaySec = Math.max(0, Number(req.body.unlockDelaySeconds) || 0);
+    const unlockAt = lockDelaySec > 0 ? new Date(Date.now() + lockDelaySec * 1000) : null;
+
     const message = await VoiceMessage.create({
       label: (req.body.label || '').trim() || `Message ${count + 1}`,
       filename: req.file.filename,
       mimeType: req.file.mimetype,
       duration: Number(req.body.duration) || 0,
+      unlockAt,
+      lockDurationSeconds: lockDelaySec,
     });
     res.status(201).json(message);
   } catch (err) {
